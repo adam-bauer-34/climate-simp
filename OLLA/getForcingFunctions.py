@@ -13,18 +13,16 @@
 # 
 # Included functions: getForcingNetCDF, getRedNoise, getPrecip, getInterpolate
 
-# In[5]:
-
 
 import numpy as np 
 import random
 
 from netCDF4 import Dataset
 
-random.seed(100) # Init seed for random number generator. If blank, the seed is the current system time.
+random.seed() # Init seed for random number generator. If blank, the seed is the current system time.
 
 
-# In[6]:
+# Generate a NetCDF to force the model with
 
 
 def getForcingNetCDF(tot_years, stats_array, filename):
@@ -93,7 +91,7 @@ def getForcingNetCDF(tot_years, stats_array, filename):
     tmp_dataset.close()
 
 
-# In[7]:
+# Generate red noise arrays for the forcing NetCDF 
 
 
 def getRedNoise(stats_array):
@@ -133,6 +131,8 @@ def getRedNoise(stats_array):
     # a useful structure going forward.
     
     free_time = (24 - day_length)*60/2. # In minutes!
+    
+    free_time = int(free_time)
     
     # Put the time of the day between, say, 9 and 5 and not from 0 to 8.
     
@@ -268,7 +268,7 @@ def getRedNoise(stats_array):
     return F_solar, precip
 
 
-# In[8]:
+# Simple (linear) interpolation function 
 
 
 def getInterpolate(array, new_length):
@@ -279,7 +279,7 @@ def getInterpolate(array, new_length):
     return new_array
 
 
-# In[9]:
+# Get precipitation for red noise generator
 
 
 def getPrecip(stats_array):
@@ -294,7 +294,11 @@ def getPrecip(stats_array):
     
     # Generate a normal distribution for the cumulative rain?
     
-    cumulative_rain = np.random.normal(mean_precip, std_precip) # sample a dist for tot rain
+    #cumulative_rain = np.random.gamma(mean_precip, scale=1.0) # sample a dist for tot rain
+    #print(cumulative_rain)
+    
+    cumulative_rain = 25
+    
     precip_events = []
     
     i = 0
@@ -308,5 +312,7 @@ def getPrecip(stats_array):
         precip_events.append(tmp_precip)
         i += 1 # neat syntax :) 
     
-    return(precip_events)
+    print(precip_events)
+    
+    return precip_events
 
