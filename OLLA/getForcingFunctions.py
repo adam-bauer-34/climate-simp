@@ -105,9 +105,9 @@ def getRedNoise(stats_array):
     
     # they create an envelope of allowable sw radiation for the model.
     
-    sw_limit = stats_array[1]
-    sw_average = stats_array[2]
-    sw_min = stats_array[3] 
+    sw_limit = stats_array[1] # highest allowable daily peak in radiation
+    sw_average = stats_array[2] # average daily peak in radiation
+    sw_min = stats_array[3]  # lowest allowable daily peak in radiation
     
     #temp_mean = stats_array[4]
     #temp_anom_norm = stats_array[5]
@@ -120,7 +120,7 @@ def getRedNoise(stats_array):
     
     r_temp = 0.6
     r_hum = 0.6
-    r_rad = 0.6
+    r_rad = 0.8
     
     day_length = 15 # IN HOURS
     
@@ -287,17 +287,15 @@ def getPrecip(stats_array):
     # Take the relevant statistics from the SGP data to tune our precip
     # events
     
-    mean_precip = stats_array[4]
+    cum_precip = stats_array[4] # average total rainfall in a summer
     std_precip = stats_array[5]
     
     indiv_event_mean = stats_array[6]
     
     # Generate a normal distribution for the cumulative rain?
     
-    #cumulative_rain = np.random.gamma(mean_precip, scale=1.0) # sample a dist for tot rain
-    #print(cumulative_rain)
-    
-    cumulative_rain = 25
+    cumulative_rain = np.random.gamma(cum_precip, scale=1.0) # sample a dist for tot rain
+    print(cumulative_rain)
     
     precip_events = []
     
@@ -312,7 +310,7 @@ def getPrecip(stats_array):
         precip_events.append(tmp_precip)
         i += 1 # neat syntax :) 
     
-    print(precip_events)
+    #print(precip_events)
     
     return precip_events
 

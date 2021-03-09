@@ -25,20 +25,19 @@ import glob
 
 def getStats(rad_file_array, precip_file_array, threshold):
     
-    rad_mean, rad_std, rad_max, rad_min = getMeanStdMaxMin(rad_file_array, "BestEstimate_down_short_hemisp") 
+    rad_mean, rad_std, rad_max, rad_min, rad_cum = getMeanStdMaxMin(rad_file_array, "BestEstimate_down_short_hemisp") 
     
     #temp_mean, temp_std, temp_max, temp_min = getMeanStdMaxMin(temp_file_array, "temperature")
     
     #hum_mean, hum_std, hum_max, hum_min = getMeanStdMaxMin(hum_file_array, "humidity")
     
-    precip_mean, precip_std, precip_max, precip_min = getMeanStdMaxMin(precip_file_array, "precip")
+    precip_mean, precip_std, precip_max, precip_min, precip_cum = getMeanStdMaxMin(precip_file_array, "precip")
     
-    indiv_precip_event_mean = getPrecipEventMeansXARRAY_1D(precip_file_array, threshold) # threshold = precip to consider an event
+    indiv_precip_event_mean_array = getPrecipEventMeansXARRAY_1D(precip_file_array, threshold) # threshold = precip to consider an event
     
-    ###
     stats_array = np.zeros(7) # initialize stats array
     
-    # [rad_anom_norm, sw_limit, sw_average, sw_min, temp_mean, temp_anom_norm, hum_mean, hum_anom_mean, mean_precip, std_precip, indiv_event_mean] in getForcingFunctions
+    # [rad_anom_norm, sw_limit, sw_average, sw_min, mean_precip, std_precip, indiv_event_mean] in getForcingFunctions
     
     stats_array[0] = rad_std
     stats_array[1] = rad_max
@@ -51,10 +50,10 @@ def getStats(rad_file_array, precip_file_array, threshold):
     #stats_array[6] = hum_mean
     #stats_array[7] = hum_std
     
-    stats_array[4] = precip_mean
+    stats_array[4] = precip_cum
     stats_array[5] = precip_std
     
-    stats_array[6] = indiv_precip_event_mean
+    stats_array[6] = np.mean(indiv_precip_event_mean_array)
     
     return stats_array
 
@@ -64,36 +63,48 @@ def getStats(rad_file_array, precip_file_array, threshold):
 
 def getMeanStdMaxMin(filearray, data_var):
     
-    N = len(filearray) 
+    N_files = len(filearray) 
     param_all_array = []
     param_max_array = []
-    param_min_array = []
+    param_cum_array = []
     
-    for i in range(0, N):
+    for i in range(0, N_files):
         tmp_dataset = xr.open_dataset(filearray[i]) # Open ith summer's dataset
         
         tmp_param = tmp_dataset[data_var].values # open the "data_var" values for all summers
         
         tmp_param_fixed = getRemoveDefects(tmp_param) # fix radiation values of -1000 and below
-        
-        #print(tmp_param_fixed)
-        
-        tmp_param_max = np.amax(tmp_param_fixed) # take the file max
-        tmp_param_min = np.amin(tmp_param_fixed) # take the file min
-        
-        param_max_array.append(tmp_param_max) # add file max to list
-        param_min_array.append(tmp_param_min) # add file min to list
         param_all_array.append(tmp_param_fixed) # add values to total array
+        param_cum_array.append(np.sum(tmp_param_fixed)) # sum of all values in array
+        
+        # Find highest peak and lowest peak by splitting total data by the day.
+        
+        N_days = int(len(tmp_param) * (60*24)**(-1))
+        
+        #print(N_days)
+        
+        tmp_param_daysplit = np.split(tmp_param, N_days) # make array of daily arrays
+        
+        for j in range(0, len(tmp_param_daysplit)):
+            tmp_daysplit_clean = getRemoveDefects(tmp_param_daysplit[j]) # clean indiv day data
+            
+            if len(tmp_daysplit_clean) > 0: # check to make sure getRemoveDefects didn't clean every value in the array
+                tmp_param_max = np.amax(tmp_daysplit_clean) # take peak daily value
+                param_max_array.append(tmp_param_max) # append to max array
+                
+            else: # if getRemoveDefects detected an entire day of bad data, just carry on and don't take the max
+                continue 
     
     param_all_array = np.concatenate(param_all_array) # concatenate arrays
     
-    param_max = np.amax(param_max_array) # determine max of all files
-    param_min = np.amin(param_min_array) # determine min of all files
+    param_max = np.amax(param_max_array) # determine max of each peak
+    param_min = np.amin(param_max_array) # determine min of each peak
     
     param_mean = np.mean(param_all_array) # determine mean of all files
     param_std = np.std(param_all_array) # determine standard deviation of all files
+    param_cum = np.mean(param_cum_array) # CUMULATIVE sum of all the data ....... GeT uR hEaD oUt Of ThE gUtTeRs
     
-    return param_mean, param_std, param_max, param_min
+    return param_mean, param_std, param_max, param_min, param_cum
 
 
 # function that gets the mean of the individual precipitation events FOR MULTIPLE SUMMER DATA!!!!
@@ -114,6 +125,7 @@ def getRemoveDefects(array):
     
     return new_array
     
+# N dimensional generalization of getPrecipEventMeansXARRAY_1D, i.e., if the files have more than one dimension to them (multiple summers, etc...)
 
 def getPrecipEventMeansXARRAY_ND(filearray, threshold):
     
@@ -182,7 +194,7 @@ def getPrecipEventMeansXARRAY_1D(filearray, threshold):
     
     N_files = len(filearray) # number of files
     
-    print(N_files)
+    #print(N_files)
     
     precip_all_array = []
     event_array = []
@@ -202,7 +214,7 @@ def getPrecipEventMeansXARRAY_1D(filearray, threshold):
 
         N_mins = len(tmp_precip)
             
-        print(N_mins)
+        #print(N_mins)
         
         for j in range(0, N_mins): 
                 
@@ -230,7 +242,14 @@ def getPrecipEventMeansXARRAY_1D(filearray, threshold):
         tmp_mean = np.mean(event_array[i])
         mean_array.append(tmp_mean) # take mean of individual events and add them to an array
     
-    return np.mean(mean_array) # mean of all events ("mean of the mean of individual events")
+    return mean_array # array of mean of all events
+
+
+# get half the autocorrelation array that numpy computes 
+
+def getAutocorrelationTrunc(array):
+    result = np.correlate(array, array, mode='full')
+    return result[int(result.size/2):] # makes t \in (0,infty) instead of t \in (-infty, infty)
 
 """
 # testing bits of this code 
