@@ -71,7 +71,7 @@ def getForcingNetCDF(tot_years, stats_array, filename):
     # Initialize vairables in the .nc that relate to forcing.
     
     F_solar_var = tmp_dataset.createVariable('F_solar', 'f4', ('time', 'summer_number', ))
-    precip_var = tmp_dataset.createVariable('precip', 'f4', ('time', 'summer_number', ))
+    precip_var = tmp_dataset.createVariable('precip_syn', 'f4', ('time', 'summer_number', ))
     
     #t_upper_var = tmp_dataset.createVariable('t_upper', 'f4', ('time', 'summer_number', ))
     #q_upper_var = tmp_dataset.createVariable('q_upper', 'f4', ('time', 'summer_number', ))

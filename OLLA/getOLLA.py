@@ -20,7 +20,7 @@ def getOLLA(filename):
     F_solar = forcing["F_solar"].values
     #t_upper = forcing["t_upper"].values
     #q_upper = forcing["q_upper"].values
-    precip = forcing["precip"].values
+    precip = forcing["precip_syn"].values
     #cf = forcing["c_f"].values
     
     ### NEED A FAT UNITS CHECK ON THE ABOVE DATA TO MAKE SURE WE'RE NOT MESSING UP UNITS ###
