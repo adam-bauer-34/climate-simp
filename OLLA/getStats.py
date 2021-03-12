@@ -221,6 +221,9 @@ def getRemoveDefects(array, data_var):
                    
             
         return interp_array
+    
+    else:
+        return "ERROR: Data keyword not compatible. Try changing the keyword to either 'precip' for precipitation or 'BestEstimate_down_short_hemisp' for radiation."
 
 
 # get precip event mean for ONE DIMENSIONAL (ONE SUMMER) DATA

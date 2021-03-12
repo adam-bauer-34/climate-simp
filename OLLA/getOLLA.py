@@ -67,7 +67,7 @@ def getTempFlux(T, m, F):
     alpha = 10. # radiative feedback
     v = 10**(-2) # density of air divided by surface resistance
     
-    exp_arg = L * R_w**(-1) * (T_0**(-1) - (T+305)**(-1))
+    exp_arg = L * R_w**(-1) * (T_0**(-1) - (T+305.)**(-1))
     #print(exp_arg)
     sat_humidity = 0.622 * e_s_0 * P_surf**(-1) * np.exp(exp_arg)
     
