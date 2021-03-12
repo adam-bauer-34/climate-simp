@@ -90,7 +90,7 @@ def getMeanStdMaxMin(filearray, data_var):
         
         for j in range(0, len(tmp_param_daysplit)):
             
-            print(i,j)
+            #print(i,j)
 
             tmp_daysplit_clean = getRemoveDefects(tmp_param_daysplit[j], data_var) # clean indiv day
             
@@ -138,7 +138,7 @@ def getRemoveDefects(array, data_var):
 
                 if array[i] <= 0:
 
-                    if i == len(array) - 1:
+                    if i == len(array) - 1: # if the defect value is the last value in the array, just set to the last value, since there are no future data points to interpolate to.
                         interp_array[i] = interp_array[i-1]
 
                     else:
@@ -195,7 +195,7 @@ def getRemoveDefects(array, data_var):
 
                         good_index_array = np.where(good_indices > i)[0]
                         
-                        if len(good_index_array) == 0: # no higher value that is not bad, happens in file 3, day 35
+                        if len(good_index_array) == 0: # no higher value that is not bad, happens in file 3, day 35, just set to zero.
                             
                             interp_array[i] = 0
                             
@@ -295,6 +295,67 @@ def getPrecipEventMeansXARRAY_1D(filearray, threshold, data_var):
 def getAutocorrelationTrunc(array):
     result = np.correlate(array, array, mode='full')
     return result[int(result.size/2):] # makes t \in (0,infty) instead of t \in (-infty, infty)
+
+# get daily mean and max (can turn on std and skew arrays, but rn they're turned off)
+
+def getDailyMeanMaxStdSkewArrays(filelist, keyword):
+    
+    N_files = len(filelist)
+            
+    daily_mean_array = [] # the mean of each day's radiation
+    daily_max_array = [] # the maximum value of the each day's radiation
+    #daily_std_array = [] # the standard deviation of each day's diurnal cycle
+    #daily_skew_array = [] # the skewness of each day's diurnal cycle
+    
+    for i in range(0, N_files):
+        
+        print(i) # what file are we on? 
+        
+        tmp_ds = xr.open_dataset(filelist[i])
+        
+        tmp_rad_data = tmp_ds[keyword].values
+        
+        N_days = int(tmp_rad_data.shape[0] * (60*24)**(-1))
+        
+        tmp_rad = np.zeros(N_days*60*24) 
+        
+        if keyword == "F_solar": # keyword check to modify how this function works for synthetic data vs. obs data
+            
+            for k in range(0, tmp_rad_data.shape[0]): 
+                tmp_rad[k] = tmp_rad_data[k][0]
+        
+        else:
+            tmp_rad = tmp_rad_data
+        
+        #print(tmp_rad)
+        
+        N_days = int(len(tmp_rad) * (60*24)**(-1))
+        
+        #print(N_days)
+        
+        tmp_rad_daysplit = np.split(tmp_rad, N_days)
+        
+        for j in range(0, N_days):
+            
+            #print(j)
+            
+            if keyword == "BestEstimate_down_short_hemisp":
+                tmp_rad_day_clean = getRemoveDefects(tmp_rad_daysplit[j], keyword) # day's worth of clean data from obs
+            
+            else:
+                tmp_rad_day_clean = tmp_rad_daysplit[j]
+            
+            if len(tmp_rad_day_clean) > 0: # if getRemoveDefects didn't remove every data point, do:
+                daily_mean_array.append(np.mean(tmp_rad_day_clean, axis=0)) # compute mean parameter value for that day
+                daily_max_array.append(np.amax(tmp_rad_day_clean, axis=0)) # report maximum param value for that day
+                #daily_std_array.append(np.std(tmp_rad_day_clean, axis=0))
+                #daily_skew_array.append(sts.skew(tmp_rad_day_clean, axis=0))
+                
+            else: # if getRemoveDefects found an entire day's worth of bad data, skip that day and continue looping
+                continue
+        
+    #return daily_mean_array, daily_max_array, daily_std_array, daily_skew_array
+    return daily_mean_array, daily_max_array
 
 # N dimensional generalization of getPrecipEventMeansXARRAY_1D, i.e., if the files have more than one dimension to them (multiple summers, etc...)
 

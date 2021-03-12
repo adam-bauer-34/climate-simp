@@ -120,7 +120,7 @@ def getRedNoise(stats_array):
     
     r_temp = 0.6
     r_hum = 0.6
-    r_rad = 0.8
+    r_rad = 0.7
     
     day_length = 15 # IN HOURS
     
