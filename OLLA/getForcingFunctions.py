@@ -101,12 +101,14 @@ def getRedNoise(stats_array):
     # Some parameters of getRedNoise are fed in from the SGP data, and thus are stored in 
     # stats_array.
     
+    #rad_anom_norm = 75.
     rad_anom_norm = stats_array[0]
     
     # they create an envelope of allowable sw radiation for the model.
     
     sw_limit = stats_array[1] # highest allowable daily peak in radiation
-    sw_average = stats_array[2] # average daily peak in radiation
+    sw_average = 800.
+    #sw_average = stats_array[2] # average daily peak in radiation
     sw_min = stats_array[3]  # lowest allowable daily peak in radiation
     
     #temp_mean = stats_array[4]
@@ -122,7 +124,7 @@ def getRedNoise(stats_array):
     r_hum = 0.6
     r_rad = 0.7
     
-    day_length = 15 # IN HOURS
+    day_length = 13 # IN HOURS
     
     ### CYCLE INITIALIZATION ###
     
@@ -260,7 +262,7 @@ def getRedNoise(stats_array):
     
     # make sure precip only happens on days where there are clouds 
     while k < len(precip_array):
-        rand_cloud_dex = random.randint(0, cloud_count)
+        rand_cloud_dex = random.randint(0, cloud_count-1)
         precip_dex = cloud_atlas[rand_cloud_dex]
         precip[precip_dex] = precip_array[k]
         k += 1
@@ -306,9 +308,9 @@ def getPrecip(stats_array):
     # cumulative rain events?
     
     while cumulative_rain > np.sum(precip_events):
-        tmp_precip = np.random.gamma(indiv_event_mean, scale=1.0) # why from a gamma dist?
+        tmp_precip = np.random.gamma(indiv_event_mean, scale=2.0) # why from a gamma dist?
         precip_events.append(tmp_precip)
-        i += 1 # neat syntax :) 
+        i += 1 # neat syntax :)
     
     #print(precip_events)
     
