@@ -25,15 +25,13 @@ import glob
 
 def getStats(rad_file_array, rad_data_var, precip_file_array, precip_data_var, threshold):
     
-    rad_mean, rad_std, rad_max, rad_min, rad_cum = getMeanStdMaxMin(rad_file_array, rad_data_var) 
+    rad_max, rad_max_mean, rad_min, rad_std = getRadStats(rad_file_array, rad_data_var)
     
     #temp_mean, temp_std, temp_max, temp_min = getMeanStdMaxMin(temp_file_array, "temperature")
     
     #hum_mean, hum_std, hum_max, hum_min = getMeanStdMaxMin(hum_file_array, "humidity")
-    
-    #print("Begin precip!")
-    
-    precip_mean, precip_std, precip_max, precip_min, precip_cum = getMeanStdMaxMin(precip_file_array, precip_data_var)
+
+    precip_cum, precip_std = getPrecipStats(precip_file_array, precip_data_var)
     
     indiv_precip_event_mean_array = getPrecipEventMeansXARRAY_1D(precip_file_array, threshold, precip_data_var) # threshold = precip to consider an event
     
@@ -43,7 +41,7 @@ def getStats(rad_file_array, rad_data_var, precip_file_array, precip_data_var, t
     
     stats_array[0] = rad_std
     stats_array[1] = rad_max
-    stats_array[2] = rad_mean
+    stats_array[2] = rad_max_mean
     stats_array[3] = rad_min
     
     #stats_array[4] = temp_mean
@@ -59,58 +57,81 @@ def getStats(rad_file_array, rad_data_var, precip_file_array, precip_data_var, t
     
     return stats_array
 
+# calc radiation statistics
 
-# function to calculate the maximum, minimum, mean, and standard deviation of a set of data
-
-
-def getMeanStdMaxMin(filearray, data_var):
+def getRadStats(rad_file_array, rad_data_var):
     
-    N_files = len(filearray) 
-    param_all_array = []
-    param_max_array = []
-    param_cum_array = []
+    # funciton that returns the max radiation peak value, the average radiation peak value, the minimum radiation peak
+    # value, and the standard deviation of the defect corrected, daytime diurnal cycles, i.e., the standard deviation
+    # of all data that occurs during the day. 
+    
+    N_files = len(rad_file_array) 
+    rad_max_array = []
+    rad_diurn_vals = []
     
     for i in range(0, N_files):
-        tmp_dataset = xr.open_dataset(filearray[i]) # Open ith summer's dataset
+        tmp_dataset = xr.open_dataset(rad_file_array[i]) # Open ith summer's dataset
         
-        tmp_param = tmp_dataset[data_var].values # open the "data_var" values for all summers
+        tmp_rad_raw = tmp_dataset[rad_data_var].values # open the "data_var" values for all summers
         
-        tmp_param_fixed = getRemoveDefects(tmp_param, data_var) # fix values of below zero
-        
-        param_all_array.append(tmp_param_fixed) # add values to total array
-        param_cum_array.append(np.sum(tmp_param_fixed)) # sum of all values in array
+        tmp_rad_fixed = getRemoveDefects(tmp_rad_raw, rad_data_var) # fix values of below zero
         
         # Find highest peak and lowest peak by splitting total data by the day.
         
-        N_days = int(len(tmp_param) * (60*24)**(-1))
+        N_days = int(len(tmp_rad_raw) * (60*24)**(-1))
         
         #print(N_days)
         
-        tmp_param_daysplit = np.split(tmp_param, N_days) # make array of daily arrays
+        tmp_rad_daysplit = np.split(tmp_rad_fixed, N_days) # make array of daily arrays
         
-        for j in range(0, len(tmp_param_daysplit)):
+        for j in range(0, N_days):
             
-            #print(i,j)
-
-            tmp_daysplit_clean = getRemoveDefects(tmp_param_daysplit[j], data_var) # clean indiv day
+            tmp_rad_day = tmp_rad_daysplit[j]
             
-            if len(tmp_daysplit_clean) > 0: # check to make sure getRemoveDefects didn't clean every value in the array
-                tmp_param_max = np.amax(tmp_daysplit_clean) # take peak daily value
-                param_max_array.append(tmp_param_max) # append to max array
+            if len(tmp_rad_day) > 0: # check to make sure getRemoveDefects didn't clean every value in the array
+                tmp_rad_max = np.amax(tmp_rad_day) # take peak daily value
+                tmp_day_vals1 = tmp_rad_day[660:1440] # first part of diurnal cycle
+                tmp_day_vals2 = tmp_rad_day[0:60] # second part of diurnal cycle (due to offset in data)
+                rad_max_array.append(tmp_rad_max) # append to max array
+                rad_diurn_vals.append(tmp_day_vals1)
+                rad_diurn_vals.append(tmp_day_vals2)
                 
             else: # if getRemoveDefects detected an entire day of bad data, just carry on and don't take the max
                 continue 
     
-    param_all_array = np.concatenate(param_all_array) # concatenate arrays
+    rad_max = np.amax(rad_max_array) # determine max of each peak
+    rad_min = np.amin(rad_max_array) # determine min of each peak
+    rad_max_mean = np.mean(rad_max_array) # average peak value
+
+    rad_diurn_vals_con = np.concatenate(rad_diurn_vals)
+    rad_std = np.std(rad_diurn_vals_con) # take standard deviation of diurnal cycle values 
     
-    param_max = np.amax(param_max_array) # determine max of each peak
-    param_min = np.amin(param_max_array) # determine min of each peak
+    return rad_max, rad_max_mean, rad_min, rad_std
+
+# calc precipitation stats
+
+def getPrecipStats(precip_file_array, precip_data_var):
     
-    param_mean = np.mean(param_all_array) # determine mean of all files
-    param_std = np.std(param_all_array) # determine standard deviation of all files
-    param_cum = np.mean(param_cum_array) # CUMULATIVE sum of all the data ....... GeT uR hEaD oUt Of ThE gUtTeRs
+    N_files = len(precip_file_array) 
+    precip_cum_array = []
+    precip_all_array = []
     
-    return param_mean, param_std, param_max, param_min, param_cum
+    for i in range(0, N_files):
+        tmp_dataset = xr.open_dataset(precip_file_array[i]) # Open ith summer's dataset
+        
+        tmp_precip = tmp_dataset[precip_data_var].values # open the "data_var" values for all summers
+        
+        tmp_precip_fixed = getRemoveDefects(tmp_precip, precip_data_var) # fix values of below zero
+        
+        precip_all_array.append(tmp_precip_fixed) # add values to total array
+        precip_cum_array.append(np.sum(tmp_precip_fixed)) # sum of all values in array
+    
+    precip_all_array_con = np.concatenate(precip_all_array) # concatenate arrays
+    
+    precip_std = np.std(precip_all_array_con) # determine standard deviation of all files
+    precip_cum = np.mean(precip_cum_array) # CUMULATIVE sum of all the data ....... GeT uR hEaD oUt Of ThE gUtTeRs
+    
+    return precip_cum, precip_std
 
 
 # function that removes defects in the radiation data, where radiation values are recorded as -9999 W m^{-2} and less than zero
@@ -301,7 +322,7 @@ def getAutocorrelationTrunc(array):
 
 # get daily mean and max (can turn on std and skew arrays, but rn they're turned off)
 
-def getDailyMeanMaxStdSkewArrays(filelist, keyword):
+def getDailyMeanMaxArrays(filelist, keyword):
     
     N_files = len(filelist)
             
@@ -349,7 +370,10 @@ def getDailyMeanMaxStdSkewArrays(filelist, keyword):
                 tmp_rad_day_clean = tmp_rad_daysplit[j]
             
             if len(tmp_rad_day_clean) > 0: # if getRemoveDefects didn't remove every data point, do:
-                daily_mean_array.append(np.mean(tmp_rad_day_clean, axis=0)) # compute mean parameter value for that day
+                tmp1 = tmp_rad_day_clean[0:60]
+                tmp2 = tmp_rad_day_clean[660:1440]
+                tmp_diurn = np.hstack((tmp1,tmp2))
+                daily_mean_array.append(np.mean(tmp_diurn, axis=0)) # compute mean parameter value for that day
                 daily_max_array.append(np.amax(tmp_rad_day_clean, axis=0)) # report maximum param value for that day
                 #daily_std_array.append(np.std(tmp_rad_day_clean, axis=0))
                 #daily_skew_array.append(sts.skew(tmp_rad_day_clean, axis=0))
@@ -459,4 +483,3 @@ P2 = [1,1,4,3,0,0]
 F_solar2 = np.stack((F1, F2)).T
 precip2 = np.stack((P1,P2)).T
 """
-

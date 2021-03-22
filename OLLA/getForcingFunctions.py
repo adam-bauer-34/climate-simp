@@ -107,8 +107,7 @@ def getRedNoise(stats_array):
     # they create an envelope of allowable sw radiation for the model.
     
     sw_limit = stats_array[1] # highest allowable daily peak in radiation
-    sw_average = 800.
-    #sw_average = stats_array[2] # average daily peak in radiation
+    sw_average = stats_array[2] # average daily peak in radiation
     sw_min = stats_array[3]  # lowest allowable daily peak in radiation
     
     #temp_mean = stats_array[4]
