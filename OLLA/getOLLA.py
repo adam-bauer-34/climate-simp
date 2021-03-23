@@ -107,4 +107,5 @@ def getMoisFlux(T, m, precip):
     
     mois_flux = (precip - v * m * VPD) * mu**(-1)
     
-    return mois_flux
+    #return mois_flux
+    return 0
