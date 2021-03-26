@@ -74,7 +74,9 @@ def getRadStats(rad_file_array, rad_data_var):
         
         tmp_rad_raw = tmp_dataset[rad_data_var].values # open the "data_var" values for all summers
         
-        tmp_rad_fixed = np.convolve(getRemoveDefects(tmp_rad_raw, rad_data_var), np.ones(60)/60, mode='same') # fix values of below zero
+        tmp_rad_defrem = getRemoveDefects(tmp_rad_raw, rad_data_var) # fix values of below zero
+        
+        tmp_rad_fixed = np.convolve(tmp_rad_defrem, np.ones(60)/60, mode='same') # smooth data on hour window
         
         # Find highest peak and lowest peak by splitting total data by the day.
         
@@ -305,13 +307,13 @@ def getPrecipEventMeansXARRAY_1D(filearray, threshold, data_var):
                     
     
     N_events = len(event_array)
-    mean_array = []
+    sum_array = []
     
     for i in range(0, N_events):
-        tmp_mean = np.mean(event_array[i])
-        mean_array.append(tmp_mean) # take mean of individual events and add them to an array
+        tmp_cum = np.sum(event_array[i])
+        sum_array.append(tmp_cum) # take mean of individual events and add them to an array
     
-    return mean_array # array of mean of all events
+    return sum_array # array of mean of all events
 
 
 # get half the autocorrelation array that numpy computes 
@@ -365,83 +367,27 @@ def getDailyMeanMaxArrays(filelist, keyword):
             
             if keyword == "BestEstimate_down_short_hemisp":
                 tmp_rad_day_clean = getRemoveDefects(tmp_rad_daysplit[j], keyword) # day's worth of clean data from obs
-            
-            else:
-                tmp_rad_day_clean = tmp_rad_daysplit[j]
-            
-            if len(tmp_rad_day_clean) > 0: # if getRemoveDefects didn't remove every data point, do:
-                tmp1 = tmp_rad_day_clean[0:60]
-                tmp2 = tmp_rad_day_clean[660:1440]
-                tmp_diurn = np.hstack((tmp1,tmp2))
-                daily_mean_array.append(np.mean(tmp_diurn, axis=0)) # compute mean parameter value for that day
-                daily_max_array.append(np.amax(tmp_rad_day_clean, axis=0)) # report maximum param value for that day
-                #daily_std_array.append(np.std(tmp_rad_day_clean, axis=0))
-                #daily_skew_array.append(sts.skew(tmp_rad_day_clean, axis=0))
                 
-            else: # if getRemoveDefects found an entire day's worth of bad data, skip that day and continue looping
-                continue
-        
-    #return daily_mean_array, daily_max_array, daily_std_array, daily_skew_array
-    return daily_mean_array, daily_max_array
-
-
-def getDailyMeanMaxArrayssyn(filelist, keyword):
-    
-    N_files = len(filelist)
-            
-    daily_mean_array = [] # the mean of each day's radiation
-    daily_max_array = [] # the maximum value of the each day's radiation
-    #daily_std_array = [] # the standard deviation of each day's diurnal cycle
-    #daily_skew_array = [] # the skewness of each day's diurnal cycle
-    
-    for i in range(0, N_files):
-        
-        print(i) # what file are we on? 
-        
-        tmp_ds = xr.open_dataset(filelist[i])
-        
-        tmp_rad_data = tmp_ds[keyword].values
-        
-        N_days = int(tmp_rad_data.shape[0] * (60*24)**(-1))
-        
-        tmp_rad = np.zeros(N_days*60*24) 
-        
-        if keyword == "F_solar": # keyword check to modify how this function works for synthetic data vs. obs data
-            
-            for k in range(0, tmp_rad_data.shape[0]): 
-                tmp_rad[k] = tmp_rad_data[k][0]
-        
-        else:
-            tmp_rad = tmp_rad_data
-        
-        #print(tmp_rad)
-        
-        N_days = int(len(tmp_rad) * (60*24)**(-1))
-        
-        #print(N_days)
-        
-        tmp_rad_daysplit = np.split(tmp_rad, N_days)
-        
-        for j in range(0, N_days):
-            
-            #print(j)
-            
-            if keyword == "BestEstimate_down_short_hemisp":
-                tmp_rad_day_clean = getRemoveDefects(tmp_rad_daysplit[j], keyword) # day's worth of clean data from obs
+                if len(tmp_rad_day_clean) > 0: # if getRemoveDefects didn't remove every data point, do:
+                    tmp1 = tmp_rad_day_clean[0:60]
+                    tmp2 = tmp_rad_day_clean[660:1440]
+                    tmp_diurn = np.hstack((tmp1,tmp2))
+                    daily_mean_array.append(np.mean(tmp_diurn, axis=0)) # compute mean parameter value for that day
+                    daily_max_array.append(np.amax(tmp_rad_day_clean, axis=0)) # report maximum param value for that day
+                    #daily_std_array.append(np.std(tmp_rad_day_clean, axis=0))
+                    #daily_skew_array.append(sts.skew(tmp_rad_day_clean, axis=0))
+                
+                else: # if getRemoveDefects found an entire day's worth of bad data, skip that day and continue looping
+                    continue
             
             else:
                 tmp_rad_day_clean = tmp_rad_daysplit[j]
-            
-            if len(tmp_rad_day_clean) > 0: # if getRemoveDefects didn't remove every data point, do:
                 tmp_diurn = tmp_rad_day_clean[360:1080]
                 daily_mean_array.append(np.mean(tmp_diurn, axis=0)) # compute mean parameter value for that day
                 daily_max_array.append(np.amax(tmp_rad_day_clean, axis=0)) # report maximum param value for that day
                 #daily_std_array.append(np.std(tmp_rad_day_clean, axis=0))
                 #daily_skew_array.append(sts.skew(tmp_rad_day_clean, axis=0))
-                
-            else: # if getRemoveDefects found an entire day's worth of bad data, skip that day and continue looping
-                continue
-        
+
     #return daily_mean_array, daily_max_array, daily_std_array, daily_skew_array
     return daily_mean_array, daily_max_array
 

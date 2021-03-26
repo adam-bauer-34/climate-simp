@@ -282,7 +282,6 @@ def getInterpolate(array, new_length):
 
 # Get precipitation for red noise generator
 
-
 def getPrecip(stats_array):
     
     # Take the relevant statistics from the SGP data to tune our precip
@@ -296,22 +295,25 @@ def getPrecip(stats_array):
     # Generate a normal distribution for the cumulative rain?
     
     cumulative_rain = np.random.gamma(cum_precip, scale=1.0) # sample a dist for tot rain
-    print(cumulative_rain)
+    #print(cumulative_rain)
     
     precip_events = []
-    
-    i = 0
-    
+
     # Confused about this statement. What does it mean for the sum of the 
     # precipitation events to be less than the *distribution* of 
     # cumulative rain events?
     
     while cumulative_rain > np.sum(precip_events):
-        tmp_precip = np.random.gamma(indiv_event_mean, scale=2.0) # why from a gamma dist?
-        precip_events.append(tmp_precip)
-        i += 1 # neat syntax :)
+        tmp_precip = np.random.gamma(indiv_event_mean, scale=.6) # why from a gamma dist?
+        if tmp_precip < 0.2:
+            continue 
+        
+        elif tmp_precip > 2.5:
+            continue 
+            
+        else:
+            precip_events.append(tmp_precip)
     
     #print(precip_events)
     
     return precip_events
-
