@@ -62,7 +62,7 @@ def getTempFlux(T, m, F):
     e_s_0 = 6.11 # hPa; constant in front of clausius clapeyron relation
     P_surf = 1013.25 #hPa; surface pressure 
     C = 4180. # heat capacity of water
-    q = 0.01
+    q = 0
     
     alpha = 10. # radiative feedback
     v = 10**(-2) # density of air divided by surface resistance
@@ -92,7 +92,7 @@ def getMoisFlux(T, m, precip):
     e_s_0 = 6.11 # hPa; constant in front of clausius clapeyron relation
     P_surf = 1013.25 #hPa; surface pressure 
     mu = 50. # density of water * soil column depth * porisity of soil
-    q = 0.01
+    q = 0
     
     alpha = 10. # radiative feedback
     v = 10**(-2) # density of air divided by surface resistance
@@ -107,5 +107,5 @@ def getMoisFlux(T, m, precip):
     
     mois_flux = (precip - v * m * VPD) * mu**(-1)
     
-    #return mois_flux
-    return 0
+    return mois_flux
+    #return 0

@@ -31,9 +31,9 @@ def getStats(rad_file_array, rad_data_var, precip_file_array, precip_data_var, t
     
     #hum_mean, hum_std, hum_max, hum_min = getMeanStdMaxMin(hum_file_array, "humidity")
 
-    precip_cum, precip_std = getPrecipStats(precip_file_array, precip_data_var)
+    precip_rate, event_interval, precip_max = getPrecipStats(precip_file_array, precip_data_var, threshold)
     
-    indiv_precip_event_mean_array = getPrecipEventMeansXARRAY_1D(precip_file_array, threshold, precip_data_var) # threshold = precip to consider an event
+    #indiv_precip_event_mean_array = getPrecipEventMeansXARRAY_1D(precip_file_array, threshold, precip_data_var) # threshold = precip to consider an event
     
     stats_array = np.zeros(7) # initialize stats array
     
@@ -50,10 +50,10 @@ def getStats(rad_file_array, rad_data_var, precip_file_array, precip_data_var, t
     #stats_array[6] = hum_mean
     #stats_array[7] = hum_std
     
-    stats_array[4] = precip_cum
-    stats_array[5] = precip_std
+    stats_array[4] = precip_rate
+    stats_array[5] = event_interval
     
-    stats_array[6] = np.mean(indiv_precip_event_mean_array)
+    stats_array[6] = precip_max
     
     return stats_array
 
@@ -110,30 +110,61 @@ def getRadStats(rad_file_array, rad_data_var):
     
     return rad_max, rad_max_mean, rad_min, rad_std
 
-# calc precipitation stats
+# calc the length between rain events, the average rate of rainfall, and the maximum value of rainfall.
 
-def getPrecipStats(precip_file_array, precip_data_var):
+def getPrecipStats(precip_file_array, precip_data_var, threshold):
     
     N_files = len(precip_file_array) 
-    precip_cum_array = []
-    precip_all_array = []
-    
+    counter_array = []
+    precip_allnonzero = []
+    counter = 0
+
     for i in range(0, N_files):
+
         tmp_dataset = xr.open_dataset(precip_file_array[i]) # Open ith summer's dataset
-        
+
         tmp_precip = tmp_dataset[precip_data_var].values # open the "data_var" values for all summers
-        
+
         tmp_precip_fixed = getRemoveDefects(tmp_precip, precip_data_var) # fix values of below zero
-        
-        precip_all_array.append(tmp_precip_fixed) # add values to total array
-        precip_cum_array.append(np.sum(tmp_precip_fixed)) # sum of all values in array
+
+        nonzero_indices = np.where(tmp_precip_fixed > threshold)[0]
+        zero_indices = np.where(tmp_precip_fixed == 0)[0]
+
+        for k in range(0, len(nonzero_indices)):
+            index = nonzero_indices[k]
+            tmp_precip_val = tmp_precip_fixed[index]
+            precip_allnonzero.append(tmp_precip_val)
+
+        for j in range(0, len(zero_indices)):
+
+            tmp_index_j = zero_indices[j]
+            tmp_index_j1 = zero_indices[j-1]
+
+            diff = tmp_index_j - tmp_index_j1
+
+            if diff == 1:
+                counter += 1
+
+            if diff != 1:
+                counter_array.append(counter)
+                counter = 0
+
+    interval_counters = np.where(np.asarray(counter_array) > 60)[0]
+    N_spaces = interval_counters.shape[0]
+    intervals = []
+
+    for i in range(0, N_spaces):
+        index = interval_counters[i]
+        tmp_counter = counter_array[index]
+        intervals.append(tmp_counter)
+
+    avg_interval = np.mean(intervals)        
+
+    avg_precip_rate = np.mean(precip_allnonzero)
+    avg_cum_precip = np.sum(precip_allnonzero)/5.
+    precip_event_max = np.amax(precip_allnonzero)
     
-    precip_all_array_con = np.concatenate(precip_all_array) # concatenate arrays
-    
-    precip_std = np.std(precip_all_array_con) # determine standard deviation of all files
-    precip_cum = np.mean(precip_cum_array) # CUMULATIVE sum of all the data ....... GeT uR hEaD oUt Of ThE gUtTeRs
-    
-    return precip_cum, precip_std
+    return avg_precip_rate, int(avg_interval), precip_event_max
 
 
 # function that removes defects in the radiation data, where radiation values are recorded as -9999 W m^{-2} and less than zero
