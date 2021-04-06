@@ -225,7 +225,7 @@ def getRedNoise(stats_array):
         min_rad_val = sw_min_sum[j]
 
         # cloud red noise has to be large for the cloud atlas to generate precip
-        if rad_summer_min[j] < -rad_anom_norm * 1.75: 
+        if rad_summer_min[j] < - rad_anom_norm * 1.75: 
             DeltaT = np.random.exponential((event_interval)**(-1))
             tmp_rainindex = j + int(DeltaT)
 
