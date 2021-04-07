@@ -8,12 +8,13 @@
 
 import numpy as np 
 import xarray as xr 
+from getStats import getRemoveDefects
 
 
 # Get integration -- i.e., this is the model! 
 
 
-def getOLLA(filename):
+def getOLLASyn(filename):
     
     forcing = xr.open_dataset(filename[0])
     
@@ -25,7 +26,24 @@ def getOLLA(filename):
     
     ### NEED A FAT UNITS CHECK ON THE ABOVE DATA TO MAKE SURE WE'RE NOT MESSING UP UNITS ###
     
-    temp_series, mois_series = getIntegration(F_solar, precip)
+    temp_series, mois_series = getIntegrationSyn(F_solar, precip)
+    
+    return temp_series, mois_series
+
+def getOLLAObs(radfile, precipfile, sumnum):
+    
+    radforcing = xr.open_dataset(radfile[sumnum])
+    precipforcing = xr.open_dataset(precipfile[sumnum])
+    
+    F_solar_raw = radforcing["BestEstimate_down_short_hemisp"].values
+    F_solar_fixed = getRemoveDefects(F_solar_raw,"BestEstimate_down_short_hemisp")
+    F_solar_clean = np.convolve(F_solar_fixed, np.ones(60)/60, mode='same') # smooth data on hour window
+    
+    precip = getRemoveDefects(precipforcing["precip"].values, "precip")
+    
+    ### NEED A FAT UNITS CHECK ON THE ABOVE DATA TO MAKE SURE WE'RE NOT MESSING UP UNITS ###
+    
+    temp_series, mois_series = getIntegrationObs(F_solar_clean, precip)
     
     return temp_series, mois_series
 
@@ -33,7 +51,7 @@ def getOLLA(filename):
 # Newtonian integrator for model
 
 
-def getIntegration(F_solar, precip):
+def getIntegrationSyn(F_solar, precip):
     
     N_minutes = F_solar.shape[0]
     N_summers = F_solar.shape[1]
@@ -50,6 +68,21 @@ def getIntegration(F_solar, precip):
     
     return temp_series, mois_series
 
+# for obs data 
+def getIntegrationObs(F_solar, precip):
+    
+    N_minutes = F_solar.shape[0]
+    
+    temp_series = np.zeros(N_minutes)
+    mois_series = np.zeros(N_minutes)
+    
+
+    for j in range(0, N_minutes): # loop through minutes
+
+        temp_series[j] = temp_series[j-1] + getTempFlux(temp_series[j-1], mois_series[j-1], F_solar[j-1])
+        mois_series[j] = mois_series[j-1] + getMoisFlux(temp_series[j-1], mois_series[j-1], precip[j-1])
+    
+    return temp_series, mois_series
 
 # Get temperature flux for the integration
 
@@ -62,7 +95,7 @@ def getTempFlux(T, m, F):
     e_s_0 = 6.11 # hPa; constant in front of clausius clapeyron relation
     P_surf = 1013.25 #hPa; surface pressure 
     C = 4180. # heat capacity of water
-    q = 0
+    q = 0.01
     
     alpha = 10. # radiative feedback
     v = 10**(-2) # density of air divided by surface resistance
@@ -92,7 +125,7 @@ def getMoisFlux(T, m, precip):
     e_s_0 = 6.11 # hPa; constant in front of clausius clapeyron relation
     P_surf = 1013.25 #hPa; surface pressure 
     mu = 50. # density of water * soil column depth * porisity of soil
-    q = 0
+    q = 0.01
     
     alpha = 10. # radiative feedback
     v = 10**(-2) # density of air divided by surface resistance

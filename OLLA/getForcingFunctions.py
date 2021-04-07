@@ -230,7 +230,7 @@ def getRedNoise(stats_array):
             tmp_rainindex = j + int(DeltaT)
 
             if tmp_rainindex <= all_summer_time - 1:
-                tmp_precip_val = np.random.gamma(precip_rate, scale=0.4)
+                tmp_precip_val = np.random.gamma(precip_rate, scale=0.1)
                 
                 if tmp_precip_val > max_precip_event:
                     precip[tmp_rainindex] = max_precip_event
